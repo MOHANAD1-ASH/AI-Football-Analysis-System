@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual Environment
+venv/
+.env
+
+# VS Code
+.vscode/
+
+# Temporary files
+temp/
+outputs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Models (اختياري لو كبيرة)
+*.pt
+*.pth
+*.onnx

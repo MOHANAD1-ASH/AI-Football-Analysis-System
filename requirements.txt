@@ -1,0 +1,11 @@
+streamlit>=1.35
+ultralytics>=8.2
+opencv-python-headless>=4.9
+numpy>=1.26,<2.0
+scipy>=1.11
+scikit-learn>=1.4
+matplotlib>=3.8
+pandas>=2.1
+torch>=2.2
+torchvision>=0.17
+lap>=0.4
