@@ -63,6 +63,8 @@ class PipelineResult:
         self.video_info: Optional[VideoInfo] = None
         self.output_fps: float = 25.0
         self.n_processed_frames: int = 0
+        self.id_remap: Dict[int, int] = {}          # raw track_id -> canonical (stitched) track_id
+        self.valid_track_ids: set = set()             # canonical track_ids that survived noise-dropping
 
 
 def run_pipeline(
@@ -278,6 +280,13 @@ def run_pipeline(
         for (x1, y1, x2, y2, tid, cls_name) in player_list:
             team = "A" if int(labels[label_idx]) == 0 else "B"
             label_idx += 1
+            if tid == -1:
+                # ByteTrack failed to assign an ID this frame (common during
+                # occlusion). Every such detection would otherwise collapse
+                # onto the same track_id=-1, which the stitcher then treats
+                # as one "player" teleporting across the whole pitch. Skip
+                # it from tracking_data/stitching, same as the notebook.
+                continue
             cx, cy = (x1 + x2) / 2.0, (y1 + y2) / 2.0
             tracking_data.append({"frame": fi, "track_id": tid, "class": "player", "team": team, "center": [cx, cy]})
 
@@ -303,5 +312,9 @@ def run_pipeline(
     tracking_data = drop_noise_tracks(tracking_data, min_frames=cfg.ID_STITCH_MIN_SEGMENT_FRAMES)
 
     result.tracking_data = tracking_data
+    result.id_remap = remap
+    result.valid_track_ids = {
+        e["track_id"] for e in tracking_data if e["class"] == "player"
+    }
     report(0.90, "Detection and tracking complete.")
     return result

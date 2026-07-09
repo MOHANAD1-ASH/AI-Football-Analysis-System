@@ -477,7 +477,6 @@ def run_full_analysis(tracking_data: List[dict], config: StatsConfig,
             "through_ball_count": _counter_by_team(through_balls),
             "cross_count": _counter_by_team(crosses),
         },
-        "recovery_and_turnover": compute_recovery_and_turnover(events),
         "shots": compute_shots(events),
         "attacks": compute_attacks(events, config),
         "ball_speed": compute_ball_speed(tracking_data, transformer, config),
@@ -536,10 +535,6 @@ def build_match_report_text(results: dict) -> str:
                       f"through={p['through_ball_count'].get(t, 0)}  "
                       f"crosses={p['cross_count'].get(t, 0)}")
 
-    section("RECOVERY / TURNOVER")
-    rt = results["recovery_and_turnover"]
-    for t in ("A", "B"):
-        lines.append(f"  Team {t} : recoveries={rt['recoveries'].get(t, 0)}  turnovers={rt['turnovers'].get(t, 0)}")
 
     section("SHOTS")
     for t, v in results["shots"]["per_team"].items():
@@ -556,7 +551,7 @@ def build_match_report_text(results: dict) -> str:
     section("BALL SPEED")
     bs = results["ball_speed"]
     lines.append(f"  Avg : {bs['avg_ms']} m/s ({bs['avg_kmh']} km/h)")
-    lines.append(f"  Max : {bs['max_ms']} m/s ({bs['max_kmh']} km/h)")
+
 
     section("TOP 10 PLAYERS BY DISTANCE")
     pp = sorted(results["per_player"].items(), key=lambda x: x[1]["distance_m"], reverse=True)[:10]

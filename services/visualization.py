@@ -44,19 +44,37 @@ def render_annotated_video(result: PipelineResult, output_path: str,
 
     # Recover each player's assigned team from tracking_data (already
     # stitched + normalized) for consistent coloring across frames.
+    # tracking_data's track_id is the CANONICAL (post-stitching) id, while
+    # player_list below still holds the RAW (pre-stitching) id, so lookups
+    # must go through id_remap first or they'll miss for every player whose
+    # id got merged/renamed during stitching.
     team_by_frame_track: Dict[Tuple[int, int], str] = {}
     for e in result.tracking_data:
         if e["class"] == "player":
             team_by_frame_track[(e["frame"], e["track_id"])] = e["team"]
 
+    id_remap = result.id_remap
+    valid_track_ids = result.valid_track_ids
+    UNKNOWN_COLOR = (160, 160, 160)  # neutral gray — do NOT default to Team B
+
     total = len(frame_data)
     for fi, (frame, player_list, referee_list, ball_box) in enumerate(frame_data):
         for (x1, y1, x2, y2, tid, cls_name) in player_list:
-            team = team_by_frame_track.get((fi, tid))
+            canonical_tid = id_remap.get(tid, tid)
+            # tid == -1 (no ByteTrack id this frame) or a track that was
+            # dropped as noise: we genuinely don't know who this is, so
+            # mark it unknown instead of guessing.
+            if tid == -1 or canonical_tid not in valid_track_ids:
+                cv2.rectangle(frame, (x1, y1), (x2, y2), UNKNOWN_COLOR, 1)
+                cv2.putText(frame, "?", (x1, max(y1 - 5, 10)),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.42, UNKNOWN_COLOR, 1)
+                continue
+
+            team = team_by_frame_track.get((fi, canonical_tid))
             team_idx = 0 if team == "A" else 1
             color = cfg.TEAM_COLORS[team_idx]
             cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
-            cv2.putText(frame, f"{team or '?'}#{tid}", (x1, max(y1 - 5, 10)),
+            cv2.putText(frame, f"{team or '?'}#{canonical_tid}", (x1, max(y1 - 5, 10)),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.42, color, 1)
 
         for (x1, y1, x2, y2, tid, cls_name) in referee_list:
@@ -155,7 +173,7 @@ def plot_heatmap(tracking_data: List[dict], transformer: CoordinateTransformer, 
         )
 
     ax.set_title(title, color="white", fontsize=13, fontweight="bold", pad=12)
-    fig.patch.set_facecolor("#0b1f14")
+    fig.patch.set_facecolor("#050505")
     plt.tight_layout()
     return fig
 
@@ -176,18 +194,19 @@ def plot_passing_network(net: dict, frame_w: int, frame_h: int, title: str = "Pa
             continue
         x1, y1 = node_positions[src]
         x2, y2 = node_positions[dst]
-        ax.plot([x1, x2], [y1, y2], color="#3498db", linewidth=0.6 + 4.0 * (w / max_w),
-                alpha=0.65, zorder=1, solid_capstyle="round")
+        ax.plot([x1, x2], [y1, y2], color="#00BFFF", linewidth=0.6 + 4.0 * (w / max_w),
+                alpha=0.7, zorder=1, solid_capstyle="round")
 
     for node, (x, y) in node_positions.items():
-        ax.scatter([x], [y], s=520, color="white", edgecolors="#2980b9", linewidths=2, zorder=2)
+        ax.scatter([x], [y], s=520, color="#00FF9D", edgecolors="#0B0F13", linewidths=2, zorder=2)
         ax.annotate(f"P{node}", (x, y), ha="center", va="center", fontsize=9,
-                    fontweight="bold", zorder=3, color="#1a1a1a")
+                    fontweight="bold", zorder=3, color="#06110b")
 
     ax.set_xlim(0, frame_w)
     ax.set_ylim(frame_h, 0)
-    ax.set_title(title, fontsize=13, fontweight="bold", pad=12)
-    ax.set_facecolor("#f4f6f7")
+    ax.set_title(title, fontsize=13, fontweight="bold", pad=12, color="white")
+    ax.set_facecolor("#0B0F13")
+    fig.patch.set_facecolor("#050505")
     ax.set_xticks([])
     ax.set_yticks([])
     plt.tight_layout()
