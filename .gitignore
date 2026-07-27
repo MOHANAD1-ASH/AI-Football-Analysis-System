@@ -20,6 +20,3 @@ outputs/
 Thumbs.db
 
 # Models (اختياري لو كبيرة)
-*.pt
-*.pth
-*.onnx
