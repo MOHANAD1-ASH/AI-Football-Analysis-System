@@ -503,9 +503,19 @@ def serialize_results(results: dict) -> dict:
     return convert(results)
 
 
-def build_match_report_text(results: dict) -> str:
+def build_match_report_text(results: dict, team_names: Optional[Dict[str, str]] = None) -> str:
     """Renders a human-readable text report (used for the Streamlit
-    'download report' option and for debugging)."""
+    'download report' option and for debugging).
+
+    team_names: optional {"A": "...", "B": "..."} display-name override.
+    Falls back to "Team A" / "Team B" when not provided, so existing
+    callers keep working unchanged.
+    """
+    names = team_names or {}
+
+    def label(t: str) -> str:
+        return names.get(t) or f"Team {t}"
+
     lines = []
 
     def section(title):
@@ -522,7 +532,7 @@ def build_match_report_text(results: dict) -> str:
 
     section("POSSESSION (%)")
     for t, v in results["possession_pct"].items():
-        lines.append(f"  Team {t} : {v}%")
+        lines.append(f"  {label(t)} : {v}%")
     lines.append(f"  Uncontrolled/loose ball : {results['possession_uncontrolled_pct']}%")
 
     section("PASSING")
@@ -530,7 +540,7 @@ def build_match_report_text(results: dict) -> str:
     for t in ("A", "B"):
         att = p["attempts"].get(t, 0)
         comp = p["completions"].get(t, 0)
-        lines.append(f"  Team {t} : {comp}/{att} ({p['accuracy_pct'].get(t, 0)}%)  "
+        lines.append(f"  {label(t)} : {comp}/{att} ({p['accuracy_pct'].get(t, 0)}%)  "
                       f"| progressive={p['progressive_count'].get(t, 0)}  "
                       f"through={p['through_ball_count'].get(t, 0)}  "
                       f"crosses={p['cross_count'].get(t, 0)}")
@@ -538,15 +548,15 @@ def build_match_report_text(results: dict) -> str:
 
     section("SHOTS")
     for t, v in results["shots"]["per_team"].items():
-        lines.append(f"  Team {t} : {v}  (on target: {results['shots']['on_target_per_team'].get(t, UNAVAILABLE)})")
+        lines.append(f"  {label(t)} : {v}  (on target: {results['shots']['on_target_per_team'].get(t, UNAVAILABLE)})")
 
     section("ATTACKS")
     for t, v in results["attacks"].items():
-        lines.append(f"  Team {t} : {v}")
+        lines.append(f"  {label(t)} : {v}")
 
     section("SPRINTS (per team)")
     for t, v in results["sprints_per_team"].items():
-        lines.append(f"  Team {t} : {v}")
+        lines.append(f"  {label(t)} : {v}")
 
     section("BALL SPEED")
     bs = results["ball_speed"]

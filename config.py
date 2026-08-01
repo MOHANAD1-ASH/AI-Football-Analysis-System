@@ -11,6 +11,8 @@ import os
 from dataclasses import dataclass, field
 from typing import Dict
 
+from services.pitch_detection import CONFIG as _PITCH_KEYPOINT_CONFIG
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # ── Model weight paths (relative, configurable) ─────────────────────────────
@@ -83,8 +85,14 @@ class StatsConfig:
     frame_w: int = 1280
     frame_h: int = 720
     pitch_visible_m: float = 50.0
-    pitch_length_m: float = 105.0
-    pitch_width_m: float = 68.0
+    # NOTE: must match services.pitch_detection.CONFIG (the homography
+    # target used whenever a per-frame pitch homography is available) —
+    # otherwise every to_pitch() call using the homography path returns
+    # coordinates in a different-sized pitch than the mini-map/heatmap
+    # outline expects, making player/ball dots land in the wrong spot
+    # relative to the drawn pitch lines.
+    pitch_length_m: float = _PITCH_KEYPOINT_CONFIG.length / 100.0
+    pitch_width_m: float = _PITCH_KEYPOINT_CONFIG.width / 100.0
     attack_direction: Dict[str, int] = field(default_factory=lambda: {"A": 1, "B": -1})
 
     possession_gain_radius_px: float = 120.0
